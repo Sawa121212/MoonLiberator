@@ -17,9 +17,14 @@ namespace Assets.Scripts.Core
 
             foreach (var enemy in Enemies)
             {
+                if (enemy is null)
+                {
+                    return;
+                }
+
                 enemy.enabled = false;
             }
-            
+
             GameOverPanel.SetActive(true);
         }
     }

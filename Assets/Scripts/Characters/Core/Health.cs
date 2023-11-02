@@ -1,10 +1,19 @@
 ﻿using System;
 using UnityEngine;
 
-namespace Assets.Sprites.Characters
+namespace Assets.Scripts.Characters.Core
 {
     public class HealthPoint : MonoBehaviour
     {
+        /// <summary>
+        /// Здоровье
+        /// </summary>
+        public int Health { get; private set; }
+
+        public bool IsDead => Health <= 0;
+
+        public int maxHealth;
+        
         // Start is called before the first frame update
         void Start()
         {
@@ -33,16 +42,15 @@ namespace Assets.Sprites.Characters
             if (IsDead)
             {
                 gameObject.SetActive(false);
+                OnDead();
             }
         }
 
         /// <summary>
-        /// Здоровье
+        /// Вызывается после того, как обект умирает
         /// </summary>
-        public int Health { get; private set; }
-
-        public bool IsDead => Health <= 0;
-
-        public int maxHealth;
+        protected virtual void OnDead()
+        {
+        }
     }
 }

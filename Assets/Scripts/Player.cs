@@ -1,112 +1,136 @@
-using System.Collections.Generic;
+using System;
 using System.Linq;
-using Assets.Sprites.Characters;
+using Assets.Scripts.Characters.Core;
+using Assets.Scripts.Characters.Core.Upgrades;
 using UnityEngine;
 
-public class Player : HealthPoint
+namespace Assets.Scripts
 {
-    // Start is called before the first frame update
-    void Start()
+    public class Player : HealthPoint
     {
-    }
+        /// <summary>
+        /// Пуля
+        /// </summary>
+        [SerializeField] private GameObject bulletPrefab;
 
-    // Update is called once per frame
-    void Update()
-    {
-        ProcessInputs();
-    }
+        /// <summary>
+        /// Дальность стрельбы
+        /// </summary>
+        [SerializeField] private float shootingRange;
 
-    void FixedUpdate()
-    {
-        Move();
-        Shoot();
-    }
+        /// <summary>
+        /// Перезарядка стрельбы
+        /// </summary>
+        [SerializeField] private float reloadShooting;
 
-    void ProcessInputs()
-    {
-        float moveX = Input.GetAxisRaw("Horizontal");
-        float moveY = Input.GetAxisRaw("Vertical");
+        /// <summary>
+        /// Скорость пули
+        /// </summary>
+        [SerializeField] private float bulletSpeed;
 
-        movement = new Vector3(moveX, moveY, 0).normalized;
-    }
+        [SerializeField] private EnemiesSpawner enemiesSpawner;
+        [SerializeField] private UpgradesManager upgradeManager;
 
-    void Move()
-    {
-        transform.position += movement * speed * Time.deltaTime;
-    }
+        /// <summary>
+        /// Уровни опыта
+        /// </summary>
+        [SerializeField] private int[] experiencesLevels;
 
-    void Shoot()
-    {
-        shootingInterval += Time.deltaTime;
-
-        if (shootingInterval >= reloadShooting)
+        // Start is called before the first frame update
+        void Start()
         {
-            shootingInterval = 0f;
-
-            // Найти ближайшего врага
-            Enemy closestEnemy = FindClosestEnemy();
-            if (closestEnemy is null)
-            {
-                return;
-            }
-            
-            // создаем пулю
-            GameObject bullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
-            Rigidbody2D bulletRigidBody = bullet.GetComponent<Rigidbody2D>();
-
-            Vector3 direction = (closestEnemy.transform.position - transform.position).normalized;
-            bulletRigidBody.AddForce(direction * bulletSpeed);
         }
-    }
 
-    /// <summary>
-    /// Найти ближайшего врага
-    /// </summary>
-    /// <returns></returns>
-    Enemy FindClosestEnemy()
-    {
-        Enemy closesEnemy = null;
-
-        float minDistance = float.MaxValue;
-
-        foreach (var enemy in enemies.Where(e => e.IsDead == false))
+        // Update is called once per frame
+        void Update()
         {
-            float distance = (enemy.transform.position - transform.position).magnitude;
+        }
 
-            if (distance < minDistance)
+        void FixedUpdate()
+        {
+            Shoot();
+        }
+
+        void Shoot()
+        {
+            shootingInterval += Time.deltaTime;
+
+            if (shootingInterval >= reloadShooting)
             {
-                minDistance = distance;
-                closesEnemy = enemy;
+                shootingInterval = 0f;
+
+                // Найти ближайшего врага
+                Enemy closestEnemy = FindClosestEnemy();
+                if (closestEnemy is null)
+                {
+                    return;
+                }
+
+                // создаем пулю
+                GameObject bullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
+                Rigidbody2D bulletRigidBody = bullet.GetComponent<Rigidbody2D>();
+
+                Vector3 direction = (closestEnemy.transform.position - transform.position).normalized;
+                bulletRigidBody.AddForce(direction * bulletSpeed);
             }
         }
 
-        return closesEnemy;
+        /// <summary>
+        /// Найти ближайшего врага
+        /// </summary>
+        /// <returns></returns>
+        Enemy FindClosestEnemy()
+        {
+            if (enemiesSpawner?.SpawnedEnemies == null || !enemiesSpawner.SpawnedEnemies.Any())
+                return null;
+
+            Enemy closesEnemy = null;
+
+            float minDistance = float.MaxValue;
+
+            foreach (var enemy in enemiesSpawner.SpawnedEnemies.Where(e => e.IsDead == false))
+            {
+                float distance = (enemy.transform.position - transform.position).magnitude;
+
+                if (distance < minDistance && distance < shootingRange)
+                {
+                    minDistance = distance;
+                    closesEnemy = enemy;
+                }
+            }
+
+            return closesEnemy;
+        }
+
+        public void AddExperience(int value)
+        {
+            experience += value;
+            var newLevel = Array.FindLastIndex(experiencesLevels, e => experience >= e);
+            Debug.Log("Player Level: " + newLevel + ", Exp: " + experience);
+
+            if (newLevel > currentLevel)
+            {
+                currentLevel = newLevel;
+                upgradeManager.Suggest();
+            }
+        }
+
+        // Test
+        [ContextMenu("AddExperience")]
+        void AddExperience()
+        {
+            AddExperience(5);
+        }
+        
+        // Test
+        [ContextMenu("ResetExperience")]
+        void ResetExperience()
+        {
+            currentLevel = experience = 0;
+        }
+
+        private float shootingInterval;
+        private int currentLevel;
+        private int experience;
     }
-
-
-    /// <summary>
-    /// Пуля
-    /// </summary>
-    public GameObject bulletPrefab;
-
-    /// <summary>
-    /// Дальность стрельбы
-    /// </summary>
-    public float shootingRange;
-
-    /// <summary>
-    /// Перезарядка стрельбы
-    /// </summary>
-    public float reloadShooting;
-
-    /// <summary>
-    /// Скорость пули
-    /// </summary>
-    public float bulletSpeed;
-
-    public float speed;
-    private Vector3 movement;
-    private float shootingInterval;
-
-    public List<Enemy> enemies;
 }
